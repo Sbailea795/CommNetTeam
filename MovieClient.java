@@ -12,6 +12,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -80,7 +81,6 @@ public class MovieClient {
         System.out.println("Movie will begin shortly.");
         
         frameBufferB = refreshBuffer(0, socketConnection, serverName, serverPort);
-
         for (int i = 0; i < frameBufferB.length; i++)
             System.out.println(frameBufferB[0].getFrame());
 
@@ -89,9 +89,7 @@ public class MovieClient {
         Timer frameHandler = new Timer();
         
         
-        //only iterating through this once, needs to go throught it 7304 times
         for (int frame = BufferSize; frame < 7304; frame+=BufferSize*2) {
-            System.out.println("**********Segemnt: " + frame + "************");
 
             int segment = frame/BufferSize;
             Future<?> RefreshA = threadpool.submit(() -> {
@@ -104,7 +102,8 @@ public class MovieClient {
                     e.printStackTrace();
                 }
             });
-
+        
+            /*
             for (int bufferedFrame = 0; bufferedFrame < BufferSize; bufferedFrame++) {
                 final int buffer = bufferedFrame;
                 final int frameCount = frame;
@@ -122,10 +121,11 @@ public class MovieClient {
                 else
                     frameHandler.schedule(frameTask, 1125);
             }
+            */
         
 
             while(!RefreshA.isDone());// System.out.println("Waiting on Segment "+ segment +".");
-            System.exit(0);
+          //  System.exit(0);
             Future<?> RefreshB = threadpool.submit(() -> {
                 try {
                     frameBufferB = refreshBuffer(segment+1, socketConnection, serverName, serverPort);
@@ -138,7 +138,6 @@ public class MovieClient {
                 }
             });
                      
-
             for (int bufferedFrame = 0; bufferedFrame < BufferSize; bufferedFrame++) {
                 final int buffer = bufferedFrame;
                 final int frameCount = frame + BufferSize;
@@ -156,9 +155,13 @@ public class MovieClient {
                     frameHandler.schedule(frameTask, 1125);
                 Thread.sleep(50);
             }
-        
-             while(!RefreshB.isDone()) //System.out.println("Waiting on Segment "+ (segment+1) +".");  
-             while((begin-System.currentTimeMillis()/1000) - ((frame+BufferSize*2)/8) < 0);
+
+            
+           // while(!RefreshB.isDone()) //System.out.println("Waiting on Segment "+ (segment+1) +".");  
+           // while((begin-System.currentTimeMillis()/1000) - ((frame+BufferSize*2)/8) < 0);
+
+            continue;
+            
 
         }
     }
@@ -169,7 +172,7 @@ public class MovieClient {
             DatagramPacket sendPacket = new DatagramPacket(datum.serialize(), datagramSize, InetAddress.getByName(serverName), serverPort);
            
             //do not set below 200 plz
-            socketConnection.setSoTimeout(200);
+            socketConnection.setSoTimeout(300);
 
             socketConnection.send(sendPacket);
             DatagramPacket receivePacket = new DatagramPacket(new byte[datagramSize], datagramSize);
